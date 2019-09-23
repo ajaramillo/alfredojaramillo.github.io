@@ -1,0 +1,45 @@
+#pageHeader{
+  height:170px;
+}
+
+#mainphoto{
+  float:left;
+  margin:10px 10px 10px 10px;
+}
+
+#mainphoto img{
+  border-radius: 7%;
+}
+
+#main{
+  float:left;
+  margin-top: 20px;
+  font-size: 14pt;
+}
+
+#myhomepage{
+  max-width:1000px; 
+}
+
+#links{
+  margin:10px 0px 10px 0px;
+}
+
+h3{
+  margin-top:10px;
+}
+
+li{
+  margin: 5px 0px 5px 0px;
+}
+
+#citation{
+  float:left;
+  width: 45%;
+  margin: 10px 1px 10px 1px;
+  min-height: 140pt;
+  padding: 20px 20px 20px 20px;
+  border-width: 1px;
+  border-style: solid;
+  border-color: #777;
+}
