@@ -13445,8 +13445,45 @@ $ mpirun -n 1 ../../build/linux_gcc/partrans_linux_gcc_opt</code></pre>
 <p>Also, no relevant difference on the computational times was found when setting <code>OMP_NUM_THREADS=4</code> (average time of 1.78 s), which indecates that for these cases Hyper-Threading gave no gain.</p>
 <h3 id="Case:-solving-several-linear-problems-with-MUMPS">Case: solving several linear problems with MUMPS<a class="anchor-link" href="#Case:-solving-several-linear-problems-with-MUMPS">&#182;</a></h3><p>This case is inspired from the discretization of an elliptic PDE by means of a <a href="https://doi.org/10.1016/j.jcp.2017.11.002">multiscale method</a>. A series of linear are needed to be solved, reading:</p>
 \begin{equation}
-A_i X_i = B_i,\qquad i=1\ldots N
-\end{equation}<p>where each unknown $X_i$ and r.h.s. $B_i$ is a matrix of $M$ columns. The matrices $A_i$ are sparse and share the same sparsity pattern.</p>
+A^{i,j} X^{i,j} = B^{i,j},\qquad i=1\ldots N_d, j=1\ldots N_p
+\end{equation}<p>The matrices $A^{i,j}$ are of order $N$, symmetric, sparse and share the same sparsity pattern. Each unknown $X^{i,j}$ and the r.h.s. $B^{i,j}$ is a matrix of $M$ columns, with $M\geq 12$. The distribution of these problems along the physical cores of the machines is as follows: fixing some index $j\in\{1\ldots N_p\}$, a single core will compute the solution of $A^{i,j} X^{i,j} = B^{i,j}$ for every $i\in\{1\ldots N_d\}$, and it is assumed that $p$ is equal to the number of physical cores available in the system.</p>
+<p>For each pair $(i,j)$, $X^{i,j}$ is computed using the <a href="https://github.com/group-gu/mumps">MUMPS library</a>. This solution is made in three phases:</p>
+<ol>
+<li>Analysis (ANA): among other things, some library is called to compute a reordering of the unkwnowns (here we use PORD).</li>
+<li>Factorization (FAC): it is computed a Cholesky factorization of $A^{i,j}$.</li>
+<li>Backward Substitution (BAS): $X^{i,j}$ is computed using the factorization of step 2.</li>
+</ol>
+<p>The number of MPI processes is equal to $p$ (the number of physical cores), and each rank allocates $N_d$ MUMPS structures together with the arrays needed for the corresponding matrices. After that, three loops perform the three phases described above. This is written as:</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-c++"><pre><span></span><span class="n">tstart</span> <span class="o">=</span> <span class="n">MPI_Wtime</span><span class="p">();</span>
+<span class="cp">#pragma omp parallel for private(i,_id)</span>
+<span class="k">for</span><span class="p">(</span><span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">Nd</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">_id</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">id</span><span class="p">[</span><span class="n">i</span><span class="p">];</span> <span class="c1">// each id[i] is a MUMPS structure</span>
+
+    <span class="p">(</span><span class="o">*</span><span class="n">_id</span><span class="p">).</span><span class="n">job</span> <span class="o">=</span> <span class="n">PHASE</span><span class="p">;</span>
+    <span class="n">dmumps_c</span><span class="p">(</span><span class="n">_id</span><span class="p">);</span> <span class="c1">// MUMPS call</span>
+<span class="p">}</span>
+<span class="n">times</span><span class="p">.</span><span class="n">backward</span> <span class="o">=</span> <span class="n">MPI_Wtime</span><span class="p">()</span> <span class="o">-</span> <span class="n">tstart</span><span class="p">;</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>where <code>PHASE</code> is equal to 1 (analysis), 2 (factorization) or 3 (backward substitution).</p>
 
 </div>
 </div>
